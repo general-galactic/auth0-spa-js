@@ -93,7 +93,7 @@ import {
 import { CacheKeyManifest } from './cache/key-manifest'
 import { retryPromise, singlePromise } from './promise-utils'
 import { CustomTokenExchangeOptions } from './TokenExchange'
-import TokenWorker from './worker/token.worker.ts'
+// import TokenWorker from './worker/token.worker'
 
 /**
  * @ignore
@@ -239,7 +239,7 @@ export class Auth0Client {
       if (this.options.workerUrl) {
         this.worker = new Worker(this.options.workerUrl)
       } else {
-        this.worker = new TokenWorker()
+        // this.worker = new TokenWorker()
       }
     }
   }
