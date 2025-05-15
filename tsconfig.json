@@ -15,6 +15,7 @@
     "strictNullChecks": true,
     "strictFunctionTypes": true,
     "strictPropertyInitialization": true,
+    "allowImportingTsExtensions": true
   },
   "exclude": ["./__tests__", "./dist/typings", "**/__mocks__/**"]
 }
