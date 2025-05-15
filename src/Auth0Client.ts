@@ -222,6 +222,7 @@ export class Auth0Client {
       !cache.allKeys
         ? new CacheKeyManifest(cache, this.options.clientId)
         : undefined,
+      this.logger,
       this.nowProvider
     )
 
