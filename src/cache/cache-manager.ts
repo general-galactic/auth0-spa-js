@@ -1,28 +1,30 @@
-import { DEFAULT_NOW_PROVIDER } from '../constants';
-import { CacheKeyManifest } from './key-manifest';
+import { DEFAULT_NOW_PROVIDER } from '../constants'
+import { Auth0Logger } from '../global'
+import { CacheKeyManifest } from './key-manifest'
 
 import {
-  CacheEntry,
-  ICache,
-  CacheKey,
-  CACHE_KEY_PREFIX,
-  WrappedCacheEntry,
-  DecodedToken,
   CACHE_KEY_ID_TOKEN_SUFFIX,
-  IdTokenEntry
-} from './shared';
+  CACHE_KEY_PREFIX,
+  CacheEntry,
+  CacheKey,
+  DecodedToken,
+  ICache,
+  IdTokenEntry,
+  WrappedCacheEntry
+} from './shared'
 
-const DEFAULT_EXPIRY_ADJUSTMENT_SECONDS = 0;
+const DEFAULT_EXPIRY_ADJUSTMENT_SECONDS = 0
 
 export class CacheManager {
-  private nowProvider: () => number | Promise<number>;
+  private nowProvider: () => number | Promise<number>
 
   constructor(
     private cache: ICache,
     private keyManifest?: CacheKeyManifest,
+    private logger?: Auth0Logger,
     nowProvider?: () => number | Promise<number>
   ) {
-    this.nowProvider = nowProvider || DEFAULT_NOW_PROVIDER;
+    this.nowProvider = nowProvider || DEFAULT_NOW_PROVIDER
   }
 
   async setIdToken(
@@ -30,41 +32,44 @@ export class CacheManager {
     idToken: string,
     decodedToken: DecodedToken
   ): Promise<void> {
-    const cacheKey = this.getIdTokenCacheKey(clientId);
+    const cacheKey = this.getIdTokenCacheKey(clientId)
     await this.cache.set(cacheKey, {
       id_token: idToken,
       decodedToken
-    });
-    await this.keyManifest?.add(cacheKey);
+    })
+    await this.keyManifest?.add(cacheKey)
   }
 
   async getIdToken(cacheKey: CacheKey): Promise<IdTokenEntry | undefined> {
-    const entry = await this.cache.get<IdTokenEntry>(
-      this.getIdTokenCacheKey(cacheKey.clientId)
-    );
+    const key = this.getIdTokenCacheKey(cacheKey.clientId)
+    this.logger?.debug(`CacheManager.getIdToken(${cacheKey.toKey()})`)
+
+    const entry = await this.cache.get<IdTokenEntry>(key)
+    this.logger?.debug(`CacheManager.getIdToken(${cacheKey.toKey()}) - entry=${JSON.stringify(entry)}`)
 
     if (!entry && cacheKey.scope && cacheKey.audience) {
-      const entryByScope = await this.get(cacheKey);
+      const entryByScope = await this.get(cacheKey)
+      this.logger?.debug(`CacheManager.getIdToken(${cacheKey.toKey()}) - entryByScope=${JSON.stringify(entryByScope)}`)
 
       if (!entryByScope) {
-        return;
+        return
       }
 
       if (!entryByScope.id_token || !entryByScope.decodedToken) {
-        return;
+        return
       }
 
       return {
         id_token: entryByScope.id_token,
         decodedToken: entryByScope.decodedToken
-      };
+      }
     }
 
     if (!entry) {
-      return;
+      return
     }
 
-    return { id_token: entry.id_token, decodedToken: entry.decodedToken };
+    return { id_token: entry.id_token, decodedToken: entry.decodedToken }
   }
 
   async get(
@@ -73,45 +78,45 @@ export class CacheManager {
   ): Promise<Partial<CacheEntry> | undefined> {
     let wrappedEntry = await this.cache.get<WrappedCacheEntry>(
       cacheKey.toKey()
-    );
+    )
 
     if (!wrappedEntry) {
-      const keys = await this.getCacheKeys();
+      const keys = await this.getCacheKeys()
 
-      if (!keys) return;
+      if (!keys) return
 
-      const matchedKey = this.matchExistingCacheKey(cacheKey, keys);
+      const matchedKey = this.matchExistingCacheKey(cacheKey, keys)
 
       if (matchedKey) {
-        wrappedEntry = await this.cache.get<WrappedCacheEntry>(matchedKey);
+        wrappedEntry = await this.cache.get<WrappedCacheEntry>(matchedKey)
       }
     }
 
     // If we still don't have an entry, exit.
     if (!wrappedEntry) {
-      return;
+      return
     }
 
-    const now = await this.nowProvider();
-    const nowSeconds = Math.floor(now / 1000);
+    const now = await this.nowProvider()
+    const nowSeconds = Math.floor(now / 1000)
 
     if (wrappedEntry.expiresAt - expiryAdjustmentSeconds < nowSeconds) {
       if (wrappedEntry.body.refresh_token) {
         wrappedEntry.body = {
           refresh_token: wrappedEntry.body.refresh_token
-        };
+        }
 
-        await this.cache.set(cacheKey.toKey(), wrappedEntry);
-        return wrappedEntry.body;
+        await this.cache.set(cacheKey.toKey(), wrappedEntry)
+        return wrappedEntry.body
       }
 
-      await this.cache.remove(cacheKey.toKey());
-      await this.keyManifest?.remove(cacheKey.toKey());
+      await this.cache.remove(cacheKey.toKey())
+      await this.keyManifest?.remove(cacheKey.toKey())
 
-      return;
+      return
     }
 
-    return wrappedEntry.body;
+    return wrappedEntry.body
   }
 
   async set(entry: CacheEntry): Promise<void> {
@@ -119,45 +124,45 @@ export class CacheManager {
       clientId: entry.client_id,
       scope: entry.scope,
       audience: entry.audience
-    });
+    })
 
-    const wrappedEntry = await this.wrapCacheEntry(entry);
+    const wrappedEntry = await this.wrapCacheEntry(entry)
 
-    await this.cache.set(cacheKey.toKey(), wrappedEntry);
-    await this.keyManifest?.add(cacheKey.toKey());
+    await this.cache.set(cacheKey.toKey(), wrappedEntry)
+    await this.keyManifest?.add(cacheKey.toKey())
   }
 
   async clear(clientId?: string): Promise<void> {
-    const keys = await this.getCacheKeys();
+    const keys = await this.getCacheKeys()
 
     /* c8 ignore next */
-    if (!keys) return;
+    if (!keys) return
 
     await keys
       .filter(key => (clientId ? key.includes(clientId) : true))
       .reduce(async (memo, key) => {
-        await memo;
-        await this.cache.remove(key);
-      }, Promise.resolve());
+        await memo
+        await this.cache.remove(key)
+      }, Promise.resolve())
 
-    await this.keyManifest?.clear();
+    await this.keyManifest?.clear()
   }
 
   private async wrapCacheEntry(entry: CacheEntry): Promise<WrappedCacheEntry> {
-    const now = await this.nowProvider();
-    const expiresInTime = Math.floor(now / 1000) + entry.expires_in;
+    const now = await this.nowProvider()
+    const expiresInTime = Math.floor(now / 1000) + entry.expires_in
 
     return {
       body: entry,
       expiresAt: expiresInTime
-    };
+    }
   }
 
   private async getCacheKeys(): Promise<string[] | undefined> {
     if (this.keyManifest) {
-      return (await this.keyManifest.get())?.keys;
+      return (await this.keyManifest.get())?.keys
     } else if (this.cache.allKeys) {
-      return this.cache.allKeys();
+      return this.cache.allKeys()
     }
   }
 
@@ -171,7 +176,7 @@ export class CacheManager {
       { clientId },
       CACHE_KEY_PREFIX,
       CACHE_KEY_ID_TOKEN_SUFFIX
-    ).toKey();
+    ).toKey()
   }
 
   /**
@@ -188,23 +193,23 @@ export class CacheManager {
    */
   private matchExistingCacheKey(keyToMatch: CacheKey, allKeys: Array<string>) {
     return allKeys.filter(key => {
-      const cacheKey = CacheKey.fromKey(key);
-      const scopeSet = new Set(cacheKey.scope && cacheKey.scope.split(' '));
-      const scopesToMatch = keyToMatch.scope?.split(' ') || [];
+      const cacheKey = CacheKey.fromKey(key)
+      const scopeSet = new Set(cacheKey.scope && cacheKey.scope.split(' '))
+      const scopesToMatch = keyToMatch.scope?.split(' ') || []
 
       const hasAllScopes =
         cacheKey.scope &&
         scopesToMatch.reduce(
           (acc, current) => acc && scopeSet.has(current),
           true
-        );
+        )
 
       return (
         cacheKey.prefix === CACHE_KEY_PREFIX &&
         cacheKey.clientId === keyToMatch.clientId &&
         cacheKey.audience === keyToMatch.audience &&
         hasAllScopes
-      );
-    })[0];
+      )
+    })[0]
   }
 }
