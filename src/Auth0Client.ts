@@ -667,6 +667,7 @@ export class Auth0Client {
       `${this.options.clientId}::${localOptions.authorizationParams.audience}::${localOptions.authorizationParams.scope}`
     )
     console.log("GET TOKEN SILENTLY", this.logger)
+    this.logger?.debug("GET TOKEN SILENTLY -FUCK")
     this.logger?.debug(`Auth0Client.getTokenSilently() - result=${valueSample(result)}`)
     return options.detailedResponse ? result : result?.access_token
   }
