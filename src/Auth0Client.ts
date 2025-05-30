@@ -664,7 +664,7 @@ export class Auth0Client {
       () => this._getTokenSilently(localOptions),
       `${this.options.clientId}::${localOptions.authorizationParams.audience}::${localOptions.authorizationParams.scope}`
     )
-    this.logger?.debug(`Auth0Client.getTokenSilently() - result=${JSON.stringify(result).slice(0, 50)}...`)
+    this.logger?.debug(`Auth0Client.getTokenSilently() - result=${this._dataSample(result)}`)
     return options.detailedResponse ? result : result?.access_token
   }
 
@@ -683,7 +683,7 @@ export class Auth0Client {
         audience: getTokenOptions.authorizationParams.audience || 'default',
         clientId: this.options.clientId
       })
-      this.logger?.debug(`Auth0Client._getTokenSilently() - cache mode is on - entry=${JSON.stringify(entry).slice(0, 50)}...`)
+      this.logger?.debug(`Auth0Client._getTokenSilently() - cache mode is on - entry=${this._dataSample(entry)}`)
 
       if (entry) {
         return entry
@@ -713,7 +713,7 @@ export class Auth0Client {
             audience: getTokenOptions.authorizationParams.audience || 'default',
             clientId: this.options.clientId
           })
-          this.logger?.debug(`Auth0Client._getTokenSilently() - lock acquired - cache mode is on - entry=${JSON.stringify(entry).slice(0, 50)}...`)
+          this.logger?.debug(`Auth0Client._getTokenSilently() - lock acquired - cache mode is on - entry=${this._dataSample(entry)}`)
 
           if (entry) {
             return entry
@@ -723,7 +723,7 @@ export class Auth0Client {
         const authResult = this.options.useRefreshTokens
           ? await this._getTokenUsingRefreshToken(getTokenOptions)
           : await this._getTokenFromIFrame(getTokenOptions)
-        this.logger?.debug(`Auth0Client._getTokenSilently() - authResult=${JSON.stringify(authResult).slice(0, 50)}...`)
+        this.logger?.debug(`Auth0Client._getTokenSilently() - authResult=${this._dataSample(authResult)}`)
 
         const { id_token, access_token, oauthTokenScope, expires_in } =
           authResult
@@ -797,7 +797,7 @@ export class Auth0Client {
    */
   public async isAuthenticated() {
     const user = await this.getUser()
-    this.logger?.debug(`Auth0Client.isAuthenticated() - user=${JSON.stringify(user).slice(0, 50)}...`)
+    this.logger?.debug(`Auth0Client.isAuthenticated() - user=${this._dataSample(user)}`)
     return !!user
   }
 
@@ -1055,7 +1055,7 @@ export class Auth0Client {
     const currentCache = this.userCache.get<IdTokenEntry>(
       CACHE_KEY_ID_TOKEN_SUFFIX
     ) as IdTokenEntry
-    this.logger?.debug(`Auth0Client._getIdTokenFromCache() - cacheKey=${cacheKey.toKey()}; currentCache=${JSON.stringify(currentCache).slice(0, 50)}...`)
+    this.logger?.debug(`Auth0Client._getIdTokenFromCache() - cacheKey=${cacheKey.toKey()}; currentCache=${this._dataSample(currentCache)}`)
 
     // If the id_token in the cache matches the value we previously cached in memory return the in-memory
     // value so that object comparison will work
@@ -1063,9 +1063,17 @@ export class Auth0Client {
       return currentCache
     }
 
-    this.logger?.debug(`Auth0Client._getIdTokenFromCache() - updating userCache - cacheKey=${CACHE_KEY_ID_TOKEN_SUFFIX}; cache=${JSON.stringify(cache).slice(0, 50)}...`)
+    this.logger?.debug(`Auth0Client._getIdTokenFromCache() - updating userCache - cacheKey=${CACHE_KEY_ID_TOKEN_SUFFIX}; cache=${this._dataSample(cache)}`)
     this.userCache.set(CACHE_KEY_ID_TOKEN_SUFFIX, cache)
     return cache
+  }
+
+  private _dataSample(data: unknown, sampleLength = 50): string {
+    if (data === undefined) return 'undefined'
+    if (data === null) return 'null'
+    const dataString = JSON.stringify(data)
+    if (!dataString) return 'no-string-data'
+    return dataString.slice(0, sampleLength) + '...'
   }
 
   private async _getEntryFromCache({

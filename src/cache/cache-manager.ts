@@ -40,16 +40,24 @@ export class CacheManager {
     await this.keyManifest?.add(cacheKey)
   }
 
+  private _dataSample(data: unknown, sampleLength = 50): string {
+    if (data === undefined) return 'undefined'
+    if (data === null) return 'null'
+    const dataString = JSON.stringify(data)
+    if (!dataString) return 'no-string-data'
+    return dataString.slice(0, sampleLength) + '...'
+  }
+
   async getIdToken(cacheKey: CacheKey): Promise<IdTokenEntry | undefined> {
     const key = this.getIdTokenCacheKey(cacheKey.clientId)
     // this.logger?.debug(`CacheManager.getIdToken(${cacheKey.toKey()})`)
 
     const entry = await this.cache.get<IdTokenEntry>(key)
-    this.logger?.debug(`CacheManager.getIdToken(${cacheKey.toKey()}) - entry=${JSON.stringify(entry).slice(0, 50)}...`)
+    this.logger?.debug(`CacheManager.getIdToken(${cacheKey.toKey()}) - entry=${this._dataSample(entry)}`)
 
     if (!entry && cacheKey.scope && cacheKey.audience) {
       const entryByScope = await this.get(cacheKey)
-      this.logger?.debug(`CacheManager.getIdToken(${cacheKey.toKey()}) - entryByScope=${JSON.stringify(entryByScope).slice(0, 50)}...`)
+      this.logger?.debug(`CacheManager.getIdToken(${cacheKey.toKey()}) - entryByScope=${this._dataSample(entryByScope)}`)
 
       if (!entryByScope) {
         return
