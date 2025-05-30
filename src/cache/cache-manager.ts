@@ -1,5 +1,6 @@
 import { DEFAULT_NOW_PROVIDER } from '../constants'
 import { Auth0Logger } from '../global'
+import { valueSample } from '../loggingUtils'
 import { CacheKeyManifest } from './key-manifest'
 
 import {
@@ -40,24 +41,16 @@ export class CacheManager {
     await this.keyManifest?.add(cacheKey)
   }
 
-  private _dataSample(data: unknown, sampleLength = 50): string {
-    if (data === undefined) return 'undefined'
-    if (data === null) return 'null'
-    const dataString = JSON.stringify(data)
-    if (!dataString) return 'no-string-data'
-    return dataString.slice(0, sampleLength) + '...'
-  }
-
   async getIdToken(cacheKey: CacheKey): Promise<IdTokenEntry | undefined> {
     const key = this.getIdTokenCacheKey(cacheKey.clientId)
     // this.logger?.debug(`Auth0.CacheManager.getIdToken(${cacheKey.toKey()})`)
 
     const entry = await this.cache.get<IdTokenEntry>(key)
-    this.logger?.debug(`Auth0.CacheManager.getIdToken(${cacheKey.toKey()}) - entry=${this._dataSample(entry)}`)
+    this.logger?.debug(`Auth0.CacheManager.getIdToken(${cacheKey.toKey()}) - entry=${valueSample(entry)}`)
 
     if (!entry && cacheKey.scope && cacheKey.audience) {
       const entryByScope = await this.get(cacheKey)
-      this.logger?.debug(`Auth0.CacheManager.getIdToken(${cacheKey.toKey()}) - entryByScope=${this._dataSample(entryByScope)}`)
+      this.logger?.debug(`Auth0.CacheManager.getIdToken(${cacheKey.toKey()}) - entryByScope=${valueSample(entryByScope)}`)
 
       if (!entryByScope) {
         return
