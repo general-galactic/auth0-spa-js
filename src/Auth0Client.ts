@@ -175,6 +175,7 @@ export class Auth0Client {
     }
 
     this.logger = options.logger
+    if (this.logger) console.log("Auth0 Client Logging Enabled")
 
     this.httpTimeoutMs = options.httpTimeoutInSeconds
       ? options.httpTimeoutInSeconds * 1000
@@ -425,7 +426,7 @@ export class Auth0Client {
    */
   public async getUser<TUser extends User>(): Promise<TUser | undefined> {
     const cache = await this._getIdTokenFromCache()
-    // this.logger?.debug(`Auth0Client.getUser() - cache=${JSON.stringify(cache)}`)
+    this.logger?.debug(`Auth0Client.getUser() - cache=${valueSample(cache)}`)
     return cache?.decodedToken?.user as TUser
   }
 
@@ -665,6 +666,7 @@ export class Auth0Client {
       () => this._getTokenSilently(localOptions),
       `${this.options.clientId}::${localOptions.authorizationParams.audience}::${localOptions.authorizationParams.scope}`
     )
+    console.log("GET TOKEN SILENTLY", this.logger)
     this.logger?.debug(`Auth0Client.getTokenSilently() - result=${valueSample(result)}`)
     return options.detailedResponse ? result : result?.access_token
   }
