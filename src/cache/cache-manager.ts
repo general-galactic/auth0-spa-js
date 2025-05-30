@@ -42,14 +42,14 @@ export class CacheManager {
 
   async getIdToken(cacheKey: CacheKey): Promise<IdTokenEntry | undefined> {
     const key = this.getIdTokenCacheKey(cacheKey.clientId)
-    this.logger?.debug(`CacheManager.getIdToken(${cacheKey.toKey()})`)
+    // this.logger?.debug(`CacheManager.getIdToken(${cacheKey.toKey()})`)
 
     const entry = await this.cache.get<IdTokenEntry>(key)
-    this.logger?.debug(`CacheManager.getIdToken(${cacheKey.toKey()}) - entry=${JSON.stringify(entry)}`)
+    this.logger?.debug(`CacheManager.getIdToken(${cacheKey.toKey()}) - entry=${JSON.stringify(entry).slice(0, 50)}...`)
 
     if (!entry && cacheKey.scope && cacheKey.audience) {
       const entryByScope = await this.get(cacheKey)
-      this.logger?.debug(`CacheManager.getIdToken(${cacheKey.toKey()}) - entryByScope=${JSON.stringify(entryByScope)}`)
+      this.logger?.debug(`CacheManager.getIdToken(${cacheKey.toKey()}) - entryByScope=${JSON.stringify(entryByScope).slice(0, 50)}...`)
 
       if (!entryByScope) {
         return
